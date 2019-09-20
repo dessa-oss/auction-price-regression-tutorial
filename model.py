@@ -4,7 +4,7 @@ from sklearn.metrics import mean_squared_error
 from tensorflow.keras.layers import Input, Lambda, Embedding, Dense, Concatenate, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, History
+from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, History, TensorBoard
 
 class FullyConnectedNetwork:
 
@@ -16,7 +16,7 @@ class FullyConnectedNetwork:
         embedding_layers = list()
         for i, col_name in enumerate(sorted(list(categorical_sizes.keys()))):
             categorical_size = categorical_sizes[col_name]
-            embedding_size = int(categorical_size ** (0.5))
+            embedding_size = int(categorical_size ** (hyperparameters['embedding_factor']))
             ith_input_slice = Lambda(lambda x: x[:, i])(inputs)
             embedding = Embedding(categorical_size, embedding_size, input_length=1)(ith_input_slice)
             embedding_layers.append(embedding)
@@ -31,11 +31,16 @@ class FullyConnectedNetwork:
         outputs = Dense(1, activation='linear')(hidden_output)
         self.model = Model(inputs, outputs)
         # define optimization procedure
-        self.lr_annealer = ReduceLROnPlateau(monitor='val_mean_squared_error', factor=0.1, patience=3, verbose=1)
-        self.early_stopper = EarlyStopping(monitor='val_mean_squared_error', min_delta=0.001, patience=5, verbose=1)
-        self.model.compile(optimizer=Adam(lr=0.0001),
+        self.lr_annealer = ReduceLROnPlateau(monitor='val_mean_squared_error', factor=hyperparameters['lr_plateau_factor'],
+                                             patience=hyperparameters['lr_plateau_patience'], verbose=1)
+        self.early_stopper = EarlyStopping(monitor='val_mean_squared_error', min_delta=hyperparameters['early_stopping_min_delta'],
+                                           patience=hyperparameters['early_stopping_patience'], verbose=1)
+
+        self.tensorboard = TensorBoard(log_dir='train_logs', histogram_freq=1)
+        self.model.compile(optimizer=Adam(lr=hyperparameters['learning_rate']),
                            loss='mean_squared_error',
                            metrics=['mean_squared_error'])
+
 
     def preproc_train(self, train_df):
         train_inputs = train_df.drop('target', axis=1)
@@ -63,19 +68,11 @@ class FullyConnectedNetwork:
         return self.model.fit(x_train, y_train, epochs=self.hyperparameters['n_epochs'],
                        batch_size=self.hyperparameters['batch_size'],
                        validation_data=(x_validation, y_validation),
-                       callbacks=[self.lr_annealer, self.early_stopper, self.history],
+                       callbacks=[self.lr_annealer, self.early_stopper, self.history, self.tensorboard],
                        verbose=1)
 
     def preproc_inference(self, test_df):
         test_inputs = test_df.drop('target', axis=1)
-        # ensure that categorical columns have valid values
-        for col in self.categorical_sizes:
-            min_value = 0
-            max_value = self.categorical_sizes[col] - 1
-            valid_values = np.arange(min_value, max_value)
-            if (test_inputs[col] > max_value).any():
-                print(col, max_value, test_inputs[col].max())
-                test_inputs[col] = test_inputs[col].clip(upper=max_value)
         # normalize non-categorical columns
         test_inputs[self.non_categorical_cols] -= self.non_categorical_train_mean
         test_inputs[self.non_categorical_cols] /= self.non_categorical_train_std

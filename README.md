@@ -12,14 +12,8 @@ This tutorial assumes that you have already installed Foundations Atlas. If you 
  Atlas community edition for free from [this link](https://www.atlas.dessa.com/).
 
 In this tutorial we make use of this data from a Kaggle competition (https://www.kaggle.com/c/bluebook-for-bulldozers).
-The competition is about predicting the sale price of a particular piece of heavy equiment at auction based on it's 
-usage, equipment type, and configuaration.
-
-Run the following script from the project directly to download the data and get started.
-
-```shell script
-python download_data.py
-```
+The competition is about predicting the sale price of a particular piece of heavy equipment at auction based on it's 
+usage, equipment type, and configuration.
 
 ## Enabling Atlas Features
 
@@ -39,24 +33,23 @@ import foundations
 
 ### Logging Metrics
 
-In model.py, there are some lines to print the test metrics that can be found in the evaluate() function. We'll replace those print
-statements with calls to the function foundations.log_metric(). This function takes two arguments, a key and a value. Once a 
-job successfully completes, logged metrics for each job will be visible from the Foundations GUI. Copy the following two lines
-and replace the two print statements with them:
+The last line of driver.py prints the test mean squared error. We'll replace this print
+statement with a call to the function foundations.log_metric(). This function takes two arguments, a key and a value. Once a 
+job successfully completes, logged metrics for each job will be visible from the Foundations GUI. Copy the following line 
+and replace the print statement with it:
 
 ```python
-foundations.log_metric('test accuracy', float(accuracy))
+foundations.log_metric('test mean squared error', float(mse))
 ```   
 
 ### Saving Artifacts
 
-Currently, the evaluate() function saves images of the models most and least confident predictions to the data directory. 
-With Atlas, we can save any artifact to the GUI with just one line. Add the following lines to the end of evaluate() 
-to send the locally saved images to the Atlas GUI. 
+Currently, we create a matplotlib graph of validation mean squared error at the end of driver.py.  
+With Atlas, we can save any artifact to the GUI with just one line. Add the following lines after "plt.savefig()" 
+to send the locally saved plot to the Atlas GUI. 
 
 ```python
-foundations.save_artifact('data/most_confident_image.png', "most_confident_image")
-foundations.save_artifact('data/least_confident_image.png', "least_confident_image")
+foundations.save_artifact('plots/validation_mse.png', "validation_mse")
 ```   
 
 ### TensorBoard Integration
@@ -71,12 +64,13 @@ foundations.set_tensorboard_logdir('train_logs')
 
 The function set_tensorboard_logdir() take one argument, the directory that your TensorBoard files will be saved to. TensorBoard files 
 are generated at each epoch through a callback, you can find the code in train() function model.py. 
+
 ### Configuration
 
 Lastly, create a file in the project directory named "job.config.yaml", and copy the text from below into the file. 
 
 ```yaml
-project_name: 'cifar-demo'
+project_name: 'bulldozer-demo'
 log_level: INFO
 ```
 
@@ -90,7 +84,7 @@ foundations submit scheduler . driver.py
 ```
 
 This will schedule a job to be run. Now open the Atlas GUI in your browser: http://localhost:5555/projects. Click into 
-the project 'cifar-demo', then click on the "Job Details" tab. Here, you'll see the running job. Once it completes, it will have a green status and you will 
+the project 'bulldozer-demo', then click on the "Job Details" tab. Here, you'll see the running job. Once it completes, it will have a green status and you will 
 see your logged metrics.
 
 To view your saved artifacts, you can click on the expansion icon to the right of the running job, then click on the 
@@ -140,14 +134,16 @@ def sample_hyperparameters(hyperparameter_ranges):
     return hyperparameters
 
 
-hyperparameter_ranges = {'num_epochs': 4,
-                         'batch_size': 64,
-                         'learning_rate': 0.001,
-                         'depthwise_separable_blocks': [{'depthwise_conv_stride': 2, 'pointwise_conv_output_filters': 6},
-                                                  {'depthwise_conv_stride': 2, 'pointwise_conv_output_filters': 12}],
-                         'dense_blocks': [{'size': SearchSpace(64, 256, int),
-                                           'dropout_rate': SearchSpace(0.1, 0.5, float)}],
-                         'decay': 1e-6}
+hyperparameter_ranges = {'n_epochs': 2,
+                   'batch_size': 128,
+                   'validation_percentage': 0.1,
+                   'dense_blocks': [{'size': SearchSpace(64,512,int), 'dropout_rate': SearchSpace(0,0.5,float)}],
+                   'embedding_factor': SearchSpace(0.2,0.6,float),
+                   'learning_rate':0.0001,
+                   'lr_plateau_factor':0.1,
+                   'lr_plateau_patience':3,
+                   'early_stopping_min_delta':0.001,
+                   'early_stopping_patience':5}
 
 num_jobs = 5
 for _ in range(num_jobs):
@@ -167,7 +163,7 @@ Replace that block with the following:
 hyperparameters = foundations.load_parameters()
 ```
 
-Now, to run the hyperparameter search, from the project directory (cifar-demo) simply run 
+Now, to run the hyperparameter search, from the project directory (bulldozer-demo) simply run 
 
 ```shell script
 python hyperparameter_search.py

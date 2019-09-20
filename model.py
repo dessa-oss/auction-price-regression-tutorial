@@ -27,14 +27,14 @@ class FullyConnectedNetwork:
             hidden_output = Dense(block_params['size'], activation='relu')(hidden_input)
             hidden_output = Dropout(block_params['dropout_rate'])(hidden_output)
             hidden_input = hidden_output
-        outputs = Dense(1, activation='sigmoid')(hidden_output)
+        outputs = Dense(1, activation='linear')(hidden_output)
         self.model = Model(inputs, outputs)
         # define optimization procedure
-        self.lr_annealer = ReduceLROnPlateau(monitor='val_acc', factor=0.1, patience=2)
-        self.early_stopper = EarlyStopping(monitor='val_acc', min_delta=0.0001, patience=3)
-        self.model.compile(optimizer=Adam(lr=0.001),
-                           loss='binary_crossentropy',
-                           metrics=['accuracy'])
+        self.lr_annealer = ReduceLROnPlateau(monitor='val_mean_squared_error', factor=0.1, patience=3, verbose=1)
+        self.early_stopper = EarlyStopping(monitor='val_mean_squared_error', min_delta=0.001, patience=5, verbose=1)
+        self.model.compile(optimizer=Adam(lr=0.0001),
+                           loss='mean_squared_error',
+                           metrics=['mean_squared_error'])
 
     def preproc_train(self, train_df):
         train_inputs = train_df.drop('target', axis=1)
@@ -63,7 +63,7 @@ class FullyConnectedNetwork:
                        batch_size=self.hyperparameters['batch_size'],
                        validation_data=(x_validation, y_validation),
                        callbacks=[self.lr_annealer, self.early_stopper],
-                       verbose=False)
+                       verbose=1)
 
     def preproc_inference(self, test_df):
         test_inputs = test_df.drop('target', axis=1)
@@ -81,5 +81,6 @@ class FullyConnectedNetwork:
 
     def evaluate(self, test_df):
         x_test, y_test = self.preproc_inference(test_df)
-        preds = self.predict(x_test)
-        return roc_auc_score(y_test, preds)
+        probs = self.predict(x_test)
+        preds = [1 if p > 0.5 else 0 for p in probs]
+        return accuracy_score(y_test, preds), roc_auc_score(y_test, probs)

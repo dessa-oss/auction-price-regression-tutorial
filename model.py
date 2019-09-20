@@ -1,6 +1,6 @@
 import numpy as np
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, roc_auc_score
 from tensorflow.keras.layers import Input, Lambda, Embedding, Dense, Concatenate, Dropout
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
@@ -59,13 +59,9 @@ class FullyConnectedNetwork:
 
     def train(self, train_df):
         x_train, y_train, x_validation, y_validation = self.preproc_train(train_df)
-        # Add dropout flag to input
-        dropout_pct = self.hyperparameters['dropout_pct']
-        train_input = [x_train, np.ones((len(x_train), 1)) * dropout_pct]
-        validation_input = [x_validation, np.zeros((len(x_validation), 1))]
-        self.model.fit(train_input, y_train, epochs=self.hyperparameters['n_epochs'],
+        self.model.fit(x_train, y_train, epochs=self.hyperparameters['n_epochs'],
                        batch_size=self.hyperparameters['batch_size'],
-                       validation_data=(validation_input, y_validation),
+                       validation_data=(x_validation, y_validation),
                        callbacks=[self.lr_annealer, self.early_stopper],
                        verbose=False)
 
@@ -86,4 +82,4 @@ class FullyConnectedNetwork:
     def evaluate(self, test_df):
         x_test, y_test = self.preproc_inference(test_df)
         preds = self.predict(x_test)
-        return accuracy_score(y_test, preds)
+        return roc_auc_score(y_test, preds)

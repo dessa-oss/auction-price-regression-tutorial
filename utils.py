@@ -1,11 +1,13 @@
 import boto3
 import numpy as np
 import pandas as pd
+import os
 
 def download_data():
-    s3 = boto3.resource('s3')
-    bucket_name = 'offer-optimization'
-    s3.meta.client.download_file(bucket_name, 'offer_outcomes.csv', 'data/offer_outcomes.csv')
+    if not os.path.isfile('data/offer_outcomes.csv'):
+        s3 = boto3.resource('s3')
+        bucket_name = 'offer-optimization'
+        s3.meta.client.download_file(bucket_name, 'offer_outcomes.csv', 'data/offer_outcomes.csv')
     offer_outcomes_df = pd.read_csv('data/offer_outcomes.csv')
     return offer_outcomes_df
 

@@ -46,7 +46,6 @@ and replace the two print statements with them:
 
 ```python
 foundations.log_metric('test accuracy', float(accuracy))
-foundations.log_metric('test roc-auc:', float(roc_auc))
 ```   
 
 ### Saving Artifacts

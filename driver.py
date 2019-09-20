@@ -1,5 +1,6 @@
 from model import FullyConnectedNetwork
 from utils import download_data
+import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import History
 
 # download data
@@ -11,18 +12,20 @@ numeric_columns = ['machine_hours_current_meter', 'age_in_years', 'target']
 categorical_sizes = {col: train_df[col].nunique() for col in train_df.columns if col not in numeric_columns}
 
 # train
-hyperparameters = {'n_epochs': 5,
-                   'batch_size': 256,
+hyperparameters = {'n_epochs': 2,
+                   'batch_size': 1024,
                    'validation_percentage': 0.1,
-                   'dense_blocks': [{'size': 1, 'dropout_rate': 0.2}]}
+                   'dense_blocks': [{'size': 256, 'dropout_rate': 0}]}
 model = FullyConnectedNetwork(input_size, hyperparameters, categorical_sizes)
-model.train(train_df)
+hist = model.train(train_df)
 
-history = History()
-print(history)
+
+val_mse_history = hist.history['val_mean_squared_error']
+plt.plot(list(range(1, len(val_mse_history)+1)), val_mse_history)
+plt.savefig('plots/plot.png')
+plt.show()
 
 # evaluate model performance on test set
-accuracy, roc_auc = model.evaluate(test_df)
-print("test accuracy: ", accuracy)
-print("test roc-auc: ", roc_auc)
+mse = model.evaluate(test_df)
+print("test mean squared error: ", mse)
 

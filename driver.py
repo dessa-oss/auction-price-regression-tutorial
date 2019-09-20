@@ -2,6 +2,9 @@ from model import FullyConnectedNetwork
 from utils import download_data
 import matplotlib.pyplot as plt
 from tensorflow.keras.callbacks import History
+import foundations
+
+foundations.set_tensorboard_logdir('train_logs')
 
 # download data
 train_df, test_df = download_data()
@@ -26,12 +29,12 @@ hyperparameters = {'n_epochs': 2,
 model = FullyConnectedNetwork(input_size, hyperparameters, categorical_sizes)
 hist = model.train(train_df)
 
-
 val_mse_history = hist.history['val_mean_squared_error']
 plt.plot(list(range(1, len(val_mse_history)+1)), val_mse_history)
 plt.savefig('plots/validation_mse.png')
+foundations.save_artifact('plots/validation_mse.png', "validation_mse")
 
 # evaluate model performance on test set
 mse = model.evaluate(test_df)
-print("test mean squared error: ", mse)
+foundations.log_metric('test mean squared error', float(mse))
 

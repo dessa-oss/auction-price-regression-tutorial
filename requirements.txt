@@ -1,5 +1,5 @@
-pandas==0.25.0
-boto3==1.9.86
-tensorflow==1.14.0
-scipy==1.2.1
-scikit_learn==0.21.3
+pandas
+boto3
+tensorflow
+scipy
+scikit_learn

@@ -5,6 +5,7 @@ from tensorflow.keras.layers import Input, Lambda, Embedding, Dense, Concatenate
 from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping, History, TensorBoard
+import foundations
 
 class FullyConnectedNetwork:
 
